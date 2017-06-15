@@ -73,6 +73,65 @@ with the single order referenced by the row's `order_id` foreign key.
 
 ### Setup Rails. Add a couple gems:
 
+Before we create our database tables and Rails models, let's configure Rails to
+use a few external libraries.
+
+- [rspec-rails](https://github.com/rspec/rspec-rails) - Testing framework.
+- [factory_girl_rails](https://github.com/thoughtbot/factory_girl_rails) - A fixtures
+replacement with a more straightforward syntax. You'll see.
+- [database_cleaner](https://github.com/DatabaseCleaner/database_cleaner) - You
+guessed it! It literally cleans our test database to ensure a clean state in
+each test suite.
+- [faker](https://github.com/stympy/faker) - A library for generating fake data.
+We'll use this to generate test data.
+- [pry-rails](https://github.com/rweng/pry-rails) - Debugger. We're going to replace
+`byebug` which comes standard with new Rails applications.
+
+We're going to add these gems to our folder's [`Gemfile`](http://tosbourn.com/what-is-the-gemfile/)
+
+Add `factory_girl_rails`, `pry-rails`, and `faker` to the `group :development, :test` section
+of your Gemfile while adding `rspec-rails` and `database_cleaner` to the `:test` group
+section.
+
+We'll also add the `ActiveModelSerializer` and `JSON-api` gems so that we can
+serialize our model data into JSON later on. We don't need them right now when
+generating models, but we'll add these gems to the top-level of our `Gemfile`
+for later use.
+
+So our `Gemfile` will look like this:
+
+```rails
+gem 'rails', '~> 5.0.3'
+gem 'pg', '~> 0.18'
+gem 'puma', '~> 3.0'
+gem 'active_model_serializers', '~> 0.10.0'
+gem 'jsonapi-resources'
+
+group :development, :test do
+  gem 'pry-rails'
+  gem 'factory_girl_rails'
+  gem 'faker'
+end
+
+group :test do
+   gem 'database_cleaner'
+end
+
+group :development do
+  gem 'listen', '~> 3.0.5'
+  # Spring speeds up development by keeping your application running in the background. Read more: https://github.com/rails/spring
+  gem 'spring'
+  gem 'spring-watcher-listen', '~> 2.0.0'
+end
+
+# Windows does not include zoneinfo files, so bundle the tzinfo-data gem
+gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
+```
+
+Run `bundle install` to install the gems.
+
+
+### Create database tables and Rails models.
 Now that we have our ERD, let's create our actual tables. We'll be using the
 build-in Rails generators. Rails comes with a number of scripts called generators
 that are designed to make your development life easier by creating everything
@@ -82,11 +141,14 @@ a bunch of files that saved us from having to create them by hand:
 
 ![new generator](rails_new.png)
 
-Rails provides a generator for creating models, which most Rails developers tend to use when creating new models.
+Rails provides a generator for creating models, which most Rails developers tend
+to use when creating new models.
 
 ```bash
 rails generate model User name:string
 ```
+
+
 
 ```bash
 rails generate model Order date:datetime user:references:index
