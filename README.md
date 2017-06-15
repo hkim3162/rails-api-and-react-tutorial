@@ -89,8 +89,8 @@ We'll use this to generate test data.
 
 We're going to add these gems to our folder's [`Gemfile`](http://tosbourn.com/what-is-the-gemfile/)
 
-Add `factory_girl_rails`, `pry-rails`, and `faker` to the `group :development, :test` section
-of your Gemfile while adding `rspec-rails` and `database_cleaner` to the `:test` group
+Add `factory_girl_rails`, `pry-rails`, `rspec-rails, '~> 3.5'` and `faker` to the `group :development, :test` section
+of your Gemfile while adding `database_cleaner` to the `:test` group
 section.
 
 We'll also add the `ActiveModelSerializer` and `JSON-api` gems so that we can
@@ -111,6 +111,7 @@ group :development, :test do
   gem 'pry-rails'
   gem 'factory_girl_rails'
   gem 'faker'
+  gem 'rspec-rails', '~> 3.5'
 end
 
 group :test do
@@ -130,6 +131,24 @@ gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 
 Run `bundle install` to install the gems.
 
+A few more commands to run to configure our Rails application. Run these in terminal:
+
+```ruby
+rails generate rspec:install
+```
+
+Look in terminal. By running the above command, we added the following files to
+our Rails app which are used for configuration our tests.
+
+```rails
+.rspec
+spec
+spec/spec_helper.rb
+spec/rails_helper.rb
+```
+
+A lot of these gems and configuration hook into the Rails generators which
+we will use to generate our models and migrations in the next section.
 
 ### Create database tables and Rails models.
 Now that we have our ERD, let's create our actual tables. We'll be using the
@@ -148,7 +167,22 @@ to use when creating new models.
 rails generate model User name:string
 ```
 
+And we can see our terminal output:
 
+```bash
+Running via Spring preloader in process 34457
+      invoke  active_record
+      create    db/migrate/20170615205116_create_users.rb
+      create    app/models/user.rb
+      invoke    rspec
+      create      spec/models/user_spec.rb
+      invoke      factory_girl
+      create        spec/factories/users.rb
+```
+
+As a result of our gems and configuration, `factory_girl` files and an `rspec`
+spec (test) were generated along with our model (code that sits on top of and
+accesses the database) and a migration (code that will generate our database table).
 
 ```bash
 rails generate model Order date:datetime user:references:index
