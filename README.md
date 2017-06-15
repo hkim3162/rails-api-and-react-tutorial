@@ -1,74 +1,94 @@
-# Blueapron Rails/React Tutorial
 
-This tutorial will be a step-by-step guide on building a Rails 5 API with
-a client-side React application.
+# Data modeling
 
-### Some reading before we start:
+### Setup
 
-**Ruby Basics**
-[How does I Ruby?](http://tutorials.jumpstartlab.com/projects/ruby_in_100_minutes.html)
+- `git clone` this repo (`git clone git@github.com:blueapron/Rails-api-and-react-tutorial.git`)
+and switch to branch: `git checkout 2_data_setup`
 
-**Rails Basics**
-Follow this tutorial for a few chapters, especially the intro chapter. It'll get you
-setup with Rails, Ruby, and Git:
-[Michael Hartl's Rails tutorial, chapters 1-6](https://www.railstutorial.org/book/beginning)
+The state of the application is a newly created Rails API
 
-**On JSON:**
-[Who is Jason?](https://www.copterlabs.com/json-what-it-is-how-it-works-how-to-use-it/)
+### What are we going to build?
 
-**Some docs on Rails API:**
-[Rail 5 API docs](http://edgeguides.rubyonrails.org/api_app.html)
+Say our product manager and tech lead have determined that we need to build a new
+Rails API that can store information about a user's orders and an order's
+products. These are the requirements:
 
-**What is an API?:**
-Technically, API stands for Application Programming Interface.
-A lot of people think API is a server. An API isn’t the same as the remote server — 
-rather it is the part of the server that receives requests and sends responses.
+- Create a new user
+- Create new orders for a user
+- See a user's orders
+- See an order's products
 
-In short, an  API is a set of programmatically accessible commands used so that
-programs can communicate with each other.
+### General overview
 
-With the advent of client-side frameworks, more developers are using Rails to build
-a backend that is shared between their web application and other native applications
-like a client-side Javascript client application or a mobile application.
+1. Plan our data model (i.e., how our data is going to be stored and
+  associated with each other). This will involve creating database migrations
+  and Rails models to interact with the database. This is the 'M' in MVC.
+2. Create Routes and Controllers to access the data via HTTP. We will create
+an endpoint to create a user, create a new order for a user, see a user's orders,
+and see an order's products. This is the 'C' in MVC.
+3. Create serializers to serialize the data into JSON so that it can be
+transmitted over the network to a consuming client side application. This enables
+the 'C' in MVC.
+4. We have no 'V' or views in the traditional MVC, at least not on the Rails
+server side of things. Since we're building a Rails API, our application does
+not need to render Views, just the JSON for a client-side application to use.
 
-For example, Twitter uses its public API on its remote server for sending data to its
-web application, which is built as a static site that consumes JSON resources.
+### Data modeling, ERDs, and You!
 
-### Setup Check
+So, what will our data model look like? Let's conceptualize it first in an
+[ERD](https://www.techopedia.com/definition/1200/entity-relationship-diagram-erd)
+before actually creating tables in our database.
 
-The Hartl tutorial above should have gotten you setup with Rails, Ruby, and Git.
+We first need to create a `User` and let's say this user has a `first_name` and
+`last_name`. Our `User` table will look like this:
 
-Some prerequisites:
-- Ensure that you have Ruby 2.2 or greater
-- Install Rails
+![User Table](user_table.png)
 
-If you type these commands in terminal, you should see this:
+But our user also needs to have many orders. Let's adapt our schema concept:
+
+![User And Orders](user_and_orders.png)
+
+So, we conceptualized the relationship between users and orders as follows: A
+user can have many orders and an order can belong to a single user. The `user_id`
+field on the orders table is a [foreign key](https://en.wikipedia.org/wiki/Foreign_key)
+which corresponds to a primary key on the `User` table. If `user_id` on the Orders
+table is equal to 1, that means that the order is associated to a user in the
+`User` table with a primary key of 1.
+
+Finally, let's add the relationship between orders and products:
+
+![Full ERD](full_erd.png)
+
+We created a joined table between the `Order` and `Product` table. Why? That's
+the only way we can express a many-to-many association with another model in a
+relational database. We want an order to have many products and for products
+to have many orders (i.e., a ramen Product can be in many orders). Since the
+association is created using a foreign key, we need another table to store the
+foreign keys of both tables. If we simply put an `order_id` on the `Product`
+table, it wouldn't be possible for a Product (represented by a row of data in the
+`Product` table) to be associated with several orders; it could only be associated
+with the single order referenced by the row's `order_id` foreign key.
+
+
+### Setup Rails. Add a couple gems:
+
+
+
+Now that we have our ERD, let's create our actual tables.
+
 ```bash
-ruby -v # ruby 2.3.0p0 (2015-12-25 revision 53290) [x86_64-darwin16]
-rails -v # Rails 5.0.1
+rails generate model User name:string
 ```
 
-If your ruby version is not up to date, you can update it with a ruby version manager like rbenv.
-
 ```bash
-rbenv install 2.3.1
-rbenv global 2.3.1
+rails generate model Order date:datetime user:references:index
 ```
 
-If your rails version is not up to date, update to the latest version by running:
-
 ```bash
-gem update rails
+rails generate model User name:string
 ```
 
-Once you have the above working, fire away:
-
 ```bash
-rails new rails_5_practice_api --api -T --database=postgresql
+rails generate model User name:string
 ```
-
-Note that we're using the `--api` argument to tell Rails that we want an API application
-and the `-T` flag to exclude Minitest the default testing framework. Don't worry,
-we will write tests... but using RSpec. Lastly, we're also going to use postgresql.
-
-Let's get started with building out our API on the next branch!
