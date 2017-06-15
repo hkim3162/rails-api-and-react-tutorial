@@ -73,9 +73,16 @@ with the single order referenced by the row's `order_id` foreign key.
 
 ### Setup Rails. Add a couple gems:
 
+Now that we have our ERD, let's create our actual tables. We'll be using the
+build-in Rails generators. Rails comes with a number of scripts called generators
+that are designed to make your development life easier by creating everything
+that's necessary to start working on a particular task. One of these is the `new`
+generator that we used already when creating the new Rails application. It created
+a bunch of files that saved us from having to create them by hand:
 
+![new generator](rails_new.png)
 
-Now that we have our ERD, let's create our actual tables.
+Rails provides a generator for creating models, which most Rails developers tend to use when creating new models.
 
 ```bash
 rails generate model User name:string
