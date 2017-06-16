@@ -219,6 +219,7 @@ config.active_record.schema_format = :sql
 Now run:
 
 ```rails
+rake db:create
 bundle exec rake db:migrate
 ```
 
@@ -229,13 +230,43 @@ table. If the version number of a migration is not inside this table, the
 migration will run. If it is inside this table, it will not run. This is to
 ensure that no conflicting or duplicate migrations are run.
 
-Now if we check the state of your actual database, we will see a users table
-and a version added to our `schema_migrations` table:
+Before checking our actual database, let's take a quick look at our `structure.sql`
+file which is a representation of the current state of our database. It should include
+this sql:
 
-If you look up our database name inside our `database.yml` file, it should be
+```sql
+CREATE TABLE users (
+    id integer NOT NULL,
+    name character varying,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+...
+CREATE SEQUENCE users_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+...
+ALTER TABLE ONLY users ALTER COLUMN id SET DEFAULT nextval('users_id_seq'::regclass);
+```
+
+(If you're unfamiliar with sql, I recommend this [site](http://www.sqlcourse.com/). In
+short, the sql statements are creating a users table, creating a sequence function
+and setting the id of the users table to use the sequence function via the
+[`nextval`](https://www.postgresql.org/docs/9.1/static/functions-sequence.html) function.)
+
+This file is a good way to quickly check what kind of attributes our `User` model
+actually has. More on structure.sql and schema files [here](http://guides.rubyonrails.org/v3.2.8/migrations.html#what-are-schema-files-for)
+
+Now let's actually look at the state of our database. If you look up our database name inside our `database.yml` file, it should be
 named similarly to the name of our app when we ran `rails new <some name>`. My development
 database is named `rails_5_ba_tutorial_development` and you see it under the
 development key of the `database.yml` file.
+
+Now if we check the state of your actual database, we will see a users table
+and a version added to our `schema_migrations` table:
 
 Run these commands in terminal:
 
@@ -243,21 +274,31 @@ Run these commands in terminal:
 $ psql rails_5_ba_tutorial_development
 ```
 
-and then:
+Inside the psql session, type this:
+
 ```bash
-rails_5_ba_tutorial_development=# select * from users
+\d users
 ```
 
 and you should see:
 
 ```bash
-rails_5_ba_tutorial_development-# ;
- id | name | created_at | updated_at
-----+------+------------+------------
-(0 rows)
+rails_5_ba_tutorial_development=# \d users
+                                     Table "public.users"
+   Column   |            Type             |                     Modifiers
+------------+-----------------------------+----------------------------------------------------
+ id         | integer                     | not null default nextval('users_id_seq'::regclass)
+ name       | character varying           |
+ created_at | timestamp without time zone | not null
+ updated_at | timestamp without time zone | not null
+Indexes:
+    "users_pkey" PRIMARY KEY, btree (id)
 ```
 
-That's our users table. Also run this command while inside 'psql':
+That's our users table. Notice the balance tree index on the primary key (id). We'll
+explain this a bit more later.
+
+Also run this command while inside 'psql':
 
 
 ```ruby
@@ -278,17 +319,65 @@ should see 1 row. That row represents the migrations that you just ran.
 
 You can exit your database by typing `\q`.
 
-More on migrations [here](http://edgeguides.rubyonrails.org/active_record_migrations.html)
+If you want to read the Rails docs about migrations, go [here](http://edgeguides.rubyonrails.org/active_record_migrations.html)
 
 Anyway, let's create the rest of our tables:
 
 ```bash
 rails generate model Order date:datetime user:references:index
-rails generate model Product cost:float
+rails generate model Product cost:float name:string
 rails generate model OrderProduct order:references product:references
+rake db:migrate
 ```
 
-Okay so you're wondering what `references` does. We're simply saying that
-this table references another table. For example, the `Order` table needs to
-reference the `User` table. How does it achieve this? By creating
+What is `references` you ask?
+We're simply saying that the table being created has a reference to another table.
+For example, the `Order` table references the `User` table. How does it achieve this? By creating
 a foreign key to the `users` table.
+
+Let's look at our migrations for the orders table:
+
+```
+class CreateOrders < ActiveRecord::Migration[5.0]
+  def change
+    create_table :orders do |t|
+      t.datetime :date
+      t.references :user, foreign_key: true
+
+      t.timestamps
+    end
+  end
+end
+```
+
+By the way, none of the generators are necessary, but they do make our lives
+easier. If you just ran `rails g migration CreateOrderTable` and filled in
+the migration file with the `def change` method and then ran `rake db:migrate`,
+it will would have created this same table.
+
+Let's look at our `structure.sql`:
+
+```
+CREATE TABLE orders (
+    id integer NOT NULL,
+    date timestamp without time zone,
+    user_id integer,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+...
+(somewhere lower in the `structure.sql` file)
+
+CREATE INDEX index_orders_on_user_id ON orders USING btree (user_id);
+```
+
+The `CREATE INDEX` line enhance database performance by creating a balanced
+tree (not a binary search tree, but similar) where data can be accessed using
+the same number of steps because tree depth increases slower than the tree nodes.
+The index is named `index_orders_on_user_id` and we're creating the index on the
+`user_id` since we're assuming that lookups for the associated user will frequently
+occur and so we index this column in order to speed up lookup times. Remember that
+the users table also has a balanced tree index on the primary key (id). This makes
+sense since we're constantly looking up rows in a table via the primary key. If we
+were, for some reason, doing lookups on another kind of column (perhaps a `uuid`),
+then a balanced tree on this column would also make sense.
