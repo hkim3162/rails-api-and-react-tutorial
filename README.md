@@ -184,14 +184,111 @@ As a result of our gems and configuration, `factory_girl` files and an `rspec`
 spec (test) were generated along with our model (code that sits on top of and
 accesses the database) and a migration (code that will generate our database table).
 
+Let's inspect this newly created migration file. You should see a migration file inside the `db/migrate` folder.
+It should look like this:
+
+```rails
+class CreateUsers < ActiveRecord::Migration[5.0]
+  def change
+    create_table :users do |t|
+      t.string :name
+
+      t.timestamps
+    end
+  end
+end
+```
+
+This migration file will be used to create an actual table in our database.
+
+Even though this migration file does interact with your ORM to create a database
+table, it's written in plain Ruby. It calls a class method called `create_table`
+which creates a table called `users`. The method also takes a block which gets
+yielded to by the `create_table` method which creates a column called `name`.
+The table will also create columns called `create_at` and `updated_at` which will
+be created via the `timestamps` method call on `t` (some kind of table object that
+gets passed via the yield method). More on yield [here](https://rubymonk.com/learning/books/4-ruby-primer-ascent/chapters/18-blocks/lessons/54-yield)
+
+Now let's create an actual table in our database using this migration file.
+
+First add this to your `application.rb` inside the `Application` class:
+```ruby
+config.active_record.schema_format = :sql
+```
+
+Now run:
+
+```rails
+bundle exec rake db:migrate
+```
+
+The above command will run all of the unrun migrations in your migrations folder.
+Every time you run a migration, a migration version (written in the beginning
+of your migration file) will be added to your database's `schema_migrations`
+table. If the version number of a migration is not inside this table, the
+migration will run. If it is inside this table, it will not run. This is to
+ensure that no conflicting or duplicate migrations are run.
+
+Now if we check the state of your actual database, we will see a users table
+and a version added to our `schema_migrations` table:
+
+If you look up our database name inside our `database.yml` file, it should be
+named similarly to the name of our app when we ran `rails new <some name>`. My development
+database is named `rails_5_ba_tutorial_development` and you see it under the
+development key of the `database.yml` file.
+
+Run these commands in terminal:
+
+```bash
+$ psql rails_5_ba_tutorial_development
+```
+
+and then:
+```bash
+rails_5_ba_tutorial_development=# select * from users
+```
+
+and you should see:
+
+```bash
+rails_5_ba_tutorial_development-# ;
+ id | name | created_at | updated_at
+----+------+------------+------------
+(0 rows)
+```
+
+That's our users table. Also run this command while inside 'psql':
+
+
+```ruby
+select * from schema_migrations
+```
+
+Your output should look something like this:
+
+```bash
+    version
+----------------
+ 20170615205116
+(1 row)
+```
+
+Your version number will be different since it's based on timestamps... but you
+should see 1 row. That row represents the migrations that you just ran.
+
+You can exit your database by typing `\q`.
+
+More on migrations [here](http://edgeguides.rubyonrails.org/active_record_migrations.html)
+
+Anyway, let's create the rest of our tables:
+
 ```bash
 rails generate model Order date:datetime user:references:index
+rails generate model Product cost:float
+rails generate model OrderProduct order:references product:references
 ```
 
-```bash
-rails generate model User name:string
-```
-
-```bash
-rails generate model User name:string
-```
+Okay so you're wondering what `references` does. We're simply saying that
+this table references another table. For example, the `Order` table needs to
+reference the `User` table. How does it achieve this? By creating
+a foreign key to the `users` table.
