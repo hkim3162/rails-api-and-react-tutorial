@@ -1,16 +1,31 @@
 # Blueapron Rails/React Tutorial
 
 This tutorial will be a step-by-step guide on building a Rails 5 API with
-a client-side React application.
+a single page React application.
+
+### Who this is for?
+
+Lifelong learning is a value at Blue Apron! Even though this tutorial will
+probably be used mostly by new hires in the engineering department, it can really
+be used as a learning guide for engineering-interested non-engineers. The next section
+provides some beginner-to-intermediate materials for anyone interested in learning
+the basics of programming in Ruby and Rails. The Hartl Tutorial is a detailed
+step-by-step tutorial in building a full-fledged Rails micro-blogging application.
+Once you've finished building that, I would then recommend following this tutorial
+in building a Rails API with a single page React app.
 
 ### Some reading before we start:
 
-**Ruby Basics**
+**Ruby Basics**  
 [How does I Ruby?](http://tutorials.jumpstartlab.com/projects/ruby_in_100_minutes.html)
 
-**Rails Basics**
+[RubyMonk](https://rubymonk.com/) (I recommend the primer and the primer ascent sections.
+  The metaprogramming section is interesting, but optional.)
+
+**Rails Basics**   
 Follow this tutorial for a few chapters, especially the intro chapter. It'll get you
 setup with Rails, Ruby, and Git:
+
 [Michael Hartl's Rails tutorial, chapters 1-6](https://www.railstutorial.org/book/beginning)
 
 **On JSON:**
