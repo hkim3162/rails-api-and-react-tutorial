@@ -330,7 +330,7 @@ rails generate model OrderProduct order:references product:references
 rake db:migrate
 ```
 
-What is `references` you ask?
+*****What is `references` you ask?*****
 We're simply saying that the table being created has a reference to another table.
 For example, the `Order` table references the `User` table. How does it achieve this? By creating
 a foreign key to the `users` table.
@@ -350,12 +350,12 @@ class CreateOrders < ActiveRecord::Migration[5.0]
 end
 ```
 
-By the way, none of the generators are necessary, but they do make our lives
-easier. If you just ran `rails g migration CreateOrderTable` and filled in
+By the way, using the built-in generator commands isn't necessary, but they do make
+our lives easier. If you just ran `rails g migration CreateOrderTable` and filled in
 the migration file with the `def change` method and then ran `rake db:migrate`,
-it will would have created this same table.
+it would have created this same table in the actual database.
 
-Let's look at our `structure.sql`:
+Let's look at our `structure.sql` (again, a SQL representation of our actual database):
 
 ```
 CREATE TABLE orders (
@@ -381,3 +381,113 @@ the users table also has a balanced tree index on the primary key (id). This mak
 sense since we're constantly looking up rows in a table via the primary key. If we
 were, for some reason, doing lookups on another kind of column (perhaps a `uuid`),
 then a balanced tree on this column would also make sense.
+
+The products table is pretty straightforward. It has 2 columns: `name` and `cost`.
+The type of the cost column is a float.
+
+You might ask: how are products and orders connected?
+
+****Our joined table*****
+
+So there is a joined table between orders and products that stores the association
+between the tables. Before we continue, let's add these lines to the `order.rb` file.
+
+Our class should now look like this:
+
+```ruby
+class Order < ApplicationRecord
+  belongs_to :user
+  has_many :order_products
+  has_many :products, through: :order_products
+end
+```
+
+We're telling Rails that an order is associated to products through the `order_products` table.
+The `has_many` class method gives an order instance new methods. Now `order_products`
+and `products` can be called on an instance of `order.` (If this doesn't make sense,
+review what a class method and instance method are in Ruby).
+
+Let's take a quick look at our joined table class (auto-generated when we ran the generator
+command):
+
+```ruby
+class OrderProduct < ApplicationRecord
+  belongs_to :order
+  belongs_to :product
+end
+```
+
+As you can see, two `belongs_to` method calls are provided which signify that an
+instance of an `order_product` belongs to both an order and a product. The table itself
+consists of only two foreign key columns. In our `structure.sql` :
+
+
+```sql
+CREATE TABLE order_products (
+    id integer NOT NULL,
+    order_id integer,
+    product_id integer,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+```
+
+Let's actually use our joined table. Run the following commands in terminal:
+
+```ruby
+rails console
+```
+
+The console command lets you interact with your Rails application from the command line.
+On the underside, rails console uses IRB, so if you've ever used it for Ruby, you'll be
+right at home. This is useful for testing out quick ideas with code and
+changing data server-side without touching the website. Then run:
+
+```ruby
+user = User.create #create a user so that we can create an order which has a foreign key
+# now let's create two orders
+Order.create(date: Date.new, user: user)
+order2 = Order.create(date: Date.new, user: user)
+order2.products.create # We will create a product off only the second order
+OrderProduct.first # Let's find our association between the second order and its product
+```
+
+After typing in the last command, you should see:
+
+```sql
+OrderProduct Load (0.4ms)  SELECT  "order_products".* FROM "order_products" ORDER BY "order_products"."id" ASC LIMIT $1  [["LIMIT", 1]]
+=> #<OrderProduct:0x007fb7e2bbda40 id: 1, order_id: 2, product_id: 1, created_at: Mon, 19 Jun 2017 14:08:49 UTC +00:00, updated_at: Mon, 19 Jun 2017 14:08:49 UTC +00:00>
+```
+
+The SQL command that fired does the following:
+"Select every row (*) from the order_products table, order the returned rows by
+id in ascending order, take the first one (it would be the lowest id)"
+
+As you can see, the returned order product has an `order_id` of 2, and a `product_id` of 1 which
+is the stored association between the second order and its product.
+
+The joined table isn't only a place to store associations. If there was an attribute that
+needed to be stored on the joined table that didn't belong on either the `orders`
+or `products` table, we can store it on the joined table. Imagine that an order's
+products had to be tracked as they were packed. Since this attribute (let's called it
+`packed_or_not`) tracks whether an individual product has been packed in the order...
+it doesn't really belong on the `orders` table (how could an attribute on the entire
+order keep track of whether an individual product has been packed or not?) or on the
+universal `products` table (if we set the attribute on the `products` table, that would
+mean that the specific product has been packed universally, which isn't what we
+want either.)
+
+
+
+### Recap
+
+What did we learn?
+
+- How to create an ERD at the beginning of building a new feature. (the site used was [this](http://ondras.zarovi.cz/sql/demo/))
+- How to generate a new Rails API-only application and configure it to use third-party gems.
+- How to use Rails generators to create tables and models. We also learned a bit about
+SQL tables and foreign keys.
+- How to read the structure.sql file and basic SQL.
+- How to interpret a joined table.
+
+Next, we'll flesh out our tables with some validations and write some basic tests in RSpec.
